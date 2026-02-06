@@ -3,6 +3,7 @@ AfterGL is a lightweight OpenGL 4.0 "branch" designed for speed and compatibilit
 
 
 Uses OpenGL 4.0 for 2010+ GPUs
+
 Project Structure
 * `main.cpp`: The engine core and shader logic.
 * `install.sh`: Automated dependency and build script.
