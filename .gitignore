@@ -1,0 +1,11 @@
+# Ignore the build folder
+build/
+
+# Ignore the compiled program
+my_gl_app
+my_gl_test
+
+# Ignore system-specific files
+.DS_Store
+*.o
+*.out
