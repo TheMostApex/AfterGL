@@ -1,18 +1,29 @@
+name: AfterGL-CI
+
+# Fix: Define when the action should run
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
     - name: Install Graphics Dependencies
+      # This fixes the "Could NOT find GLEW" error
       run: |
         sudo apt-get update
-        # We need these for GL 4.0 and Windowing on the runner
         sudo apt-get install -y libglew-dev libglfw3-dev libgl1-mesa-dev
 
-    - name: Run cmake
+    - name: Configure CMake
+      # Using -B build creates the directory automatically
       run: cmake -B build
 
-    - name: Build
+    - name: Build AfterGL
       run: cmake --build build
