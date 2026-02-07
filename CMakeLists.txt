@@ -1,30 +1,54 @@
-# 1. Define the version of CMake we are using
 cmake_minimum_required(VERSION 3.10)
+project(AfterGL VERSION 0.2 LANGUAGES C CXX)
 
-# 2. Set the Project Name
-project(AfterGL)
+# 1. Use standard GNU directories (lib, include, etc.)
+include(GNUInstallDirs)
 
-# 3. Use Modern C++ (C++17 is great for performance)
+# 2. Set C++ Standard for our Namespace Bridge
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 4. Find the necessary libraries on Garuda
-# This looks for GLFW3 (the window maker)
-find_package(glfw3 REQUIRED)
+# 3. Find Dependencies for GL 4.0
+# We need GLEW to access 4.0 functions and GLFW for the window
+find_package(GLEW REQUIRED)
+find_package(GLFW3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
-# 5. Tell the compiler where your header files are
-# This lets you use #include <glad/glad.h>
-include_directories(include)
+# 4. Collect Source Files
+set(SOURCES src/AfterGL.cpp)
 
-# 6. Build the executable
-# This combines your code and the GLAD loader into one program
-# This tells Linux to create a "Shared Library" (.so)
-add_library(AfterGL SHARED src/glad.c)
+# 5. Create the Shared Library
+add_library(AfterGL SHARED ${SOURCES})
 
-# We move your 'main.cpp' code into a separate test app
-add_executable(AfterGL_Test main.cpp)
-target_link_libraries(AfterGL_Test AfterGL glfw ${OPENGL_LIBRARIES} dl)
+# 6. FIX Point #4: Professional Naming
+# Outputs libaftergl.so so users can link with -laftergl
+set_target_properties(AfterGL PROPERTIES OUTPUT_NAME "aftergl")
 
-# 7. Link the "Engine" parts together
-# AfterGL needs GLFW, OpenGL, and 'dl' (the Linux library loader)
-target_link_libraries(AfterGL glfw ${OPENGL_LIBRARIES} dl)
+# 7. FIX Point #3: Header inclusion
+# Handles both local builds and installed system headers
+target_include_directories(AfterGL PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+# 8. Link everything together
+# This connects your code to the GPU drivers and window system
+target_link_libraries(AfterGL PRIVATE
+    GLEW::GLEW
+    glfw
+    OpenGL::GL
+)
+
+# 9. Versioning
+set_target_properties(AfterGL PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+)
+
+# 10. INSTALLATION Logic
+# This makes 'sudo make install' work properly
+install(TARGETS AfterGL
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+install(FILES include/AfterGL.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
