@@ -11,6 +11,3 @@ Project Structure
 * `include/`: Headers for GLAD and KHR.
 
 AfterGL comes with an automated installer that handles dependencies (cmake, glfw, etc.) for both Arch and Ubuntu/Debian.
-
-```bash
-git clone [https://github.com/YOUR_USERNAME/AfterGL.git](https://github.com/YOUR_USERNAME/AfterGL.git) && cd AfterGL && chmod +x install.sh && ./install.sh
