@@ -16,11 +16,9 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Graphics Dependencies
-      # This fixes the "Could NOT find GLEW" error
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglew-dev libglfw3-dev libgl1-mesa-dev
-
+        sudo apt-get install -y libglew-dev libglfw3-dev libgl1-mesa-dev pkg-config
     - name: Configure CMake
       # Using -B build creates the directory automatically
       run: cmake -B build

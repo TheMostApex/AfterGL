@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 3. Find Dependencies for GL 4.0
 # We need GLEW to access 4.0 functions and GLFW for the window
 find_package(GLEW REQUIRED)
-find_package(GLFW3 REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # 4. Collect Source Files
@@ -35,7 +35,7 @@ target_include_directories(AfterGL PUBLIC
 # This connects your code to the GPU drivers and window system
 target_link_libraries(AfterGL PRIVATE
     GLEW::GLEW
-    glfw
+    glfw        # or glfw3, depending on what your system prefers
     OpenGL::GL
 )
 
