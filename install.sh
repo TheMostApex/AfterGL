@@ -1,34 +1,22 @@
 #!/bin/bash
 
-echo "------------------------------------------"
-echo "Starting AfterGL Installation..."
-echo "------------------------------------------"
+echo "--------------------------------"
+echo "Starting AfterGL installalation."
+echo "--------------------------------"
 
-# 1. Ensure dependencies are installed (The 'Careful' way)
-echo "Checking system dependencies..."
-sudo pacman -S --needed --noconfirm mesa libglvnd glfw-x11 cmake base-devel
+echo "Installing system dependencies..."
+sudo apt-get update
+sudo apt-get install -y libglfw3-dev libgl1-mesa-dev cmake build-essential
 
-# 2. Clean up old failed attempts
-if [ -d "build" ]; then
-    echo "Cleaning old build directory..."
-    rm -rf build
-fi
-
-# 3. Create fresh build folder
-mkdir build
+# 2. Build the project
+echo "Building AfterGL..."
+mkdir -p build
 cd build
-
-# 4. Configure with CMake
-echo "Configuring AfterGL..."
 cmake ..
+make
 
-# 5. Compile
-echo "Compiling AfterGL..."
-if make; then
-    echo "------------------------------------------"
-    echo "Run AfterGL with: ./build/AfterGL"
-    echo "------------------------------------------"
-else
-    echo "Build failed. Check the error message above."
-    exit 1
-fi
+# 3. Install to the system
+echo "Installing AfterGL to /usr/local..."
+sudo make install
+
+echo "Done! You can now link with -laftergl"

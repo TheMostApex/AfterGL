@@ -1,65 +1,75 @@
 #include "AfterGL.h"
-#include <GL/glew.h>  // Use GLEW to load GL 4.0 entry points
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <vector>
 
-// Internal state
+// Internal State
 static GLFWwindow* g_Window = nullptr;
+static GLuint g_ShaderProgram = 0;
 static GLuint g_VAO = 0;
 static GLuint g_VBO = 0;
-static GLuint g_ShaderProgram = 0;
 
-// Simple GLSL 4.0 Shaders
+// GLSL 4.0 Shaders (Standard for Old Metal)
 const char* vertexShaderSource = "#version 400\n"
 "layout (location = 0) in vec3 aPos;\n"
-"void main() { gl_Position = vec4(aPos, 1.0); }\0";
+"void main() {\n"
+"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"}\0";
 
 const char* fragmentShaderSource = "#version 400\n"
 "out vec4 FragColor;\n"
-"void main() { FragColor = vec4(1.0, 0.5, 0.2, 1.0); }\0";
+"void main() {\n"
+"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n" // Classic Orange
+"}\0";
 
-// --- Internal Helper: Shader Compiler ---
-static GLuint CompileShaders() {
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertexShaderSource, NULL);
-    glCompileShader(vs);
-
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fs);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    return program;
+// Helper: Shader Compiler
+static GLuint CompileShader(unsigned int type, const char* source) {
+    GLuint id = glCreateShader(type);
+    glShaderSource(id, 1, &source, nullptr);
+    glCompileShader(id);
+    return id;
 }
 
 // --- API Implementation ---
 
 void Init(int width, int height, const char* title) {
-    if (!glfwInit()) return;
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return;
+    }
 
-    // Force OpenGL 4.0 Core Profile
+    // Target OpenGL 4.0 Core
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    g_Window = glfwCreateWindow(width, height, title, NULL, NULL);
+    g_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!g_Window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return;
     }
 
     glfwMakeContextCurrent(g_Window);
-    glewInit(); // Load GL 4.0 functions
 
-    g_ShaderProgram = CompileShaders();
+    // Initialize GLAD (Replaces GLEW)
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cerr << "Failed to initialize GLAD" << std::endl;
+        return;
+    }
 
-    // Setup Geometry for DrawTriangle (Point #5 Fix)
+    // Setup Shaders
+    GLuint vs = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
+    GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+    g_ShaderProgram = glCreateProgram();
+    glAttachShader(g_ShaderProgram, vs);
+    glAttachShader(g_ShaderProgram, fs);
+    glLinkProgram(g_ShaderProgram);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    // Setup Geometry (Triangle)
     float vertices[] = {
         -0.5f, -0.5f, 0.0f,
         0.5f, -0.5f, 0.0f,
@@ -75,6 +85,9 @@ void Init(int width, int height, const char* title) {
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
 void Clear(float r, float g, float b) {
