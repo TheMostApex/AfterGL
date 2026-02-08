@@ -1,6 +1,6 @@
 AfterGL is a lightweight OpenGL 4.0 "branch" designed for speed and compatibility. It is specifically built to provide a modern graphics foundation for legacy GPUs that can no longer handle heavy modern engines.
 
-
+It requires GLM for 3D processing.
 
 Uses OpenGL 4.0 for 2010+ GPUs
 

@@ -1,19 +1,22 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "AfterGL.h"
-#include <vector>
 
 namespace AfterGL {
     static GLFWwindow* window;
-    struct Vert { float x, y, r, g, b; };
     static std::vector<Vert> batch;
     static GLuint vao, vbo, shaderProgram;
+    static GLuint projLoc, viewLoc, modelLoc;
     static int winW, winH;
 
-    // Built-in Shaders
     const char* vSrc = "#version 330 core\n"
-    "layout (location = 0) in vec2 aPos; layout (location = 1) in vec3 aCol;\n"
-    "out vec3 vCol; void main() { gl_Position = vec4(aPos, 0.0, 1.0); vCol = aCol; }";
+    "layout (location = 0) in vec3 aPos; layout (location = 1) in vec3 aCol;\n"
+    "uniform mat4 uProj; uniform mat4 uView; uniform mat4 uModel;\n"
+    "out vec3 vCol; void main() { gl_Position = uProj * uView * uModel * vec4(aPos, 1.0); vCol = aCol; }";
+
     const char* fSrc = "#version 330 core\n"
     "out vec4 fCol; in vec3 vCol; void main() { fCol = vec4(vCol, 1.0); }";
 
@@ -28,51 +31,74 @@ namespace AfterGL {
         gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
         winW = width; winH = height;
 
-        // Compile Shaders
+        glEnable(GL_DEPTH_TEST);
+
         GLuint v = glCreateShader(GL_VERTEX_SHADER); glShaderSource(v, 1, &vSrc, NULL); glCompileShader(v);
         GLuint f = glCreateShader(GL_FRAGMENT_SHADER); glShaderSource(f, 1, &fSrc, NULL); glCompileShader(f);
         shaderProgram = glCreateProgram(); glAttachShader(shaderProgram, v); glAttachShader(shaderProgram, f);
         glLinkProgram(shaderProgram);
 
-        // Buffer Setup
+        projLoc = glGetUniformLocation(shaderProgram, "uProj");
+        viewLoc = glGetUniformLocation(shaderProgram, "uView");
+        modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+
         glGenVertexArrays(1, &vao); glGenBuffers(1, &vbo);
         glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glEnableVertexAttribArray(0); glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vert), (void*)0);
-        glEnableVertexAttribArray(1); glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vert), (void*)(sizeof(float)*2));
+        glEnableVertexAttribArray(0); glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vert), (void*)0);
+        glEnableVertexAttribArray(1); glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vert), (void*)(sizeof(float)*3));
     }
 
-    bool IsKeyDown(int key) {
-        return glfwGetKey(window, key) == GLFW_PRESS;
-    }
+    void DrawQuad3D(float x, float y, float z, float w, float h, float rotX, float rotY, float r, float g, float b) {
+        float hw = w/2.0f; float hh = h/2.0f;
 
-    void Clear(float r, float g, float b) {
-        glClearColor(r, g, b, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        batch.clear();
-    }
+        // Define local quad vertices
+        Vert v1 = {-hw, -hh, 0, r, g, b}; Vert v2 = {hw, -hh, 0, r, g, b};
+        Vert v3 = {hw, hh, 0, r, g, b};   Vert v4 = {-hw, hh, 0, r, g, b};
 
-    void DrawQuad(float x, float y, float w, float h, float r, float g, float b) {
-        auto nx = [&](float v, float m) { return (v / m) * 2.0f - 1.0f; };
-        auto ny = [&](float v, float m) { return 1.0f - (v / m) * 2.0f; };
-        float x1 = nx(x, winW), x2 = nx(x+w, winW), y1 = ny(y, winH), y2 = ny(y+h, winH);
+        // Rotation logic could be done here or in shader. For batching, we use a simple translation/rotation matrix.
+        // In this production version, we apply position to vertices to keep the batcher fast.
+        auto translate = [&](Vert& v) {
+            glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+            m = glm::rotate(m, rotX, glm::vec3(1, 0, 0));
+            m = glm::rotate(m, rotY, glm::vec3(0, 1, 0));
+            glm::vec4 res = m * glm::vec4(v.x, v.y, v.z, 1.0f);
+            v.x = res.x; v.y = res.y; v.z = res.z;
+        };
 
-        batch.push_back({x1, y1, r, g, b}); batch.push_back({x2, y1, r, g, b});
-        batch.push_back({x2, y2, r, g, b}); batch.push_back({x1, y1, r, g, b});
-        batch.push_back({x2, y2, r, g, b}); batch.push_back({x1, y2, r, g, b});
+        translate(v1); translate(v2); translate(v3); translate(v4);
+
+        batch.push_back(v1); batch.push_back(v2); batch.push_back(v3);
+        batch.push_back(v1); batch.push_back(v3); batch.push_back(v4);
     }
 
     void Render() {
-        if (!batch.empty()) {
-            glUseProgram(shaderProgram);
-            glBindVertexArray(vao);
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-            glBufferData(GL_ARRAY_BUFFER, batch.size() * sizeof(Vert), batch.data(), GL_STREAM_DRAW);
-            glDrawArrays(GL_TRIANGLES, 0, batch.size());
-        }
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glUseProgram(shaderProgram);
+
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)winW/winH, 0.1f, 2000.0f);
+        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -600.0f));
+        glm::mat4 model = glm::mat4(1.0f);
+
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, batch.size() * sizeof(Vert), batch.data(), GL_STREAM_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, batch.size());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
+        batch.clear();
     }
 
     bool IsRunning() { return !glfwWindowShouldClose(window); }
     void Shutdown() { glfwTerminate(); }
+    bool IsKeyDown(int key) { return glfwGetKey(window, key) == GLFW_PRESS; }
+
+    void Clear(float r, float g, float b) {
+        glClearColor(r, g, b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
 }
