@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 #include "AfterGL.h"
 
 namespace AfterGL {
@@ -32,6 +33,7 @@ namespace AfterGL {
         winW = width; winH = height;
 
         glEnable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE); // Ensures we see both sides of the quads while testing
 
         GLuint v = glCreateShader(GL_VERTEX_SHADER); glShaderSource(v, 1, &vSrc, NULL); glCompileShader(v);
         GLuint f = glCreateShader(GL_FRAGMENT_SHADER); glShaderSource(f, 1, &fSrc, NULL); glCompileShader(f);
@@ -49,15 +51,13 @@ namespace AfterGL {
     }
 
     void DrawQuad3D(float x, float y, float z, float w, float h, float rotX, float rotY, float r, float g, float b) {
-        float hw = w/2.0f; float hh = h/2.0f;
+        float hw = w / 2.0f;
+        float hh = h / 2.0f;
 
-        // Define local quad vertices
         Vert v1 = {-hw, -hh, 0, r, g, b}; Vert v2 = {hw, -hh, 0, r, g, b};
         Vert v3 = {hw, hh, 0, r, g, b};   Vert v4 = {-hw, hh, 0, r, g, b};
 
-        // Rotation logic could be done here or in shader. For batching, we use a simple translation/rotation matrix.
-        // In this production version, we apply position to vertices to keep the batcher fast.
-        auto translate = [&](Vert& v) {
+        auto transform = [&](Vert& v) {
             glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
             m = glm::rotate(m, rotX, glm::vec3(1, 0, 0));
             m = glm::rotate(m, rotY, glm::vec3(0, 1, 0));
@@ -65,28 +65,40 @@ namespace AfterGL {
             v.x = res.x; v.y = res.y; v.z = res.z;
         };
 
-        translate(v1); translate(v2); translate(v3); translate(v4);
+        transform(v1); transform(v2); transform(v3); transform(v4);
 
         batch.push_back(v1); batch.push_back(v2); batch.push_back(v3);
         batch.push_back(v1); batch.push_back(v3); batch.push_back(v4);
     }
 
+    void Clear(float r, float g, float b) {
+        glClearColor(r, g, b, 1.0f);
+        // Clear both Color and Depth so the next frame starts fresh
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
     void Render() {
-        glClear(GL_DEPTH_BUFFER_BIT);
         glUseProgram(shaderProgram);
 
+        // Standard perspective matrix
         glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)winW/winH, 0.1f, 2000.0f);
+
+        // Move the camera back -600 units
         glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -600.0f));
+
+        // Identity model matrix (transformations are baked into vertices in DrawQuad3D)
         glm::mat4 model = glm::mat4(1.0f);
 
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, batch.size() * sizeof(Vert), batch.data(), GL_STREAM_DRAW);
-        glDrawArrays(GL_TRIANGLES, 0, batch.size());
+        if (!batch.empty()) {
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, batch.size() * sizeof(Vert), batch.data(), GL_STREAM_DRAW);
+            glDrawArrays(GL_TRIANGLES, 0, batch.size());
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -96,9 +108,4 @@ namespace AfterGL {
     bool IsRunning() { return !glfwWindowShouldClose(window); }
     void Shutdown() { glfwTerminate(); }
     bool IsKeyDown(int key) { return glfwGetKey(window, key) == GLFW_PRESS; }
-
-    void Clear(float r, float g, float b) {
-        glClearColor(r, g, b, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
 }
