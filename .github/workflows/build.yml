@@ -24,12 +24,12 @@ jobs:
           libglu1-mesa-dev
 
     - name: Verify Library Compilation
+      # Replace 'AfterGL' with the EXACT name of your subfolder (case-sensitive)
+      working-directory: ./AfterGL
       run: |
-        # Compile AfterGL.cpp and glad.c into object files (-c)
-        # This checks for errors without needing a main() function or game file.
-        g++ -c AfterGL/src/AfterGL.cpp AfterGL/src/glad.c \
-          -I AfterGL/include \
+        g++ -c src/AfterGL.cpp src/glad.c \
+          -I include \
           -fPIC
 
     - name: Success Check
-      run: echo "AfterGL library files compiled successfully."
+      # run: echo "Library validation complete.
