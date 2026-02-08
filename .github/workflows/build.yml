@@ -24,7 +24,7 @@ jobs:
           libglu1-mesa-dev
 
     - name: Verify Library Compilation
-      # Replace 'AfterGL' with the EXACT name of your subfolder (case-sensitive)
+      # We put working-directory inside the step, correctly indented
       working-directory: ./AfterGL
       run: |
         g++ -c src/AfterGL.cpp src/glad.c \
@@ -32,4 +32,4 @@ jobs:
           -fPIC
 
     - name: Success Check
-      # run: echo "Library validation complete.
+      run: echo "Library validation complete."
