@@ -25,9 +25,12 @@ jobs:
 
     - name: Verify Library Compilation
       run: |
-        # Use the explicit paths found in your repository
-        g++ -c AfterGL/src/AfterGL.cpp AfterGL/src/glad.c \
-          -I AfterGL/include \
+        # Explicitly move into the subfolder
+        cd AfterGL
+
+        # Now that we are inside AfterGL, paths are relative to this folder
+        g++ -c src/AfterGL.cpp src/glad.c \
+          -I include \
           -fPIC
 
     - name: Success Check
