@@ -24,11 +24,10 @@ jobs:
           libglu1-mesa-dev
 
     - name: Verify Library Compilation
-      # We put working-directory inside the step, correctly indented
-      working-directory: ./AfterGL
       run: |
-        g++ -c src/AfterGL.cpp src/glad.c \
-          -I include \
+        # Use the explicit paths found in your repository
+        g++ -c AfterGL/src/AfterGL.cpp AfterGL/src/glad.c \
+          -I AfterGL/include \
           -fPIC
 
     - name: Success Check
