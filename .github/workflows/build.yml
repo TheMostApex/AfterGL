@@ -1,4 +1,4 @@
-name: Build AfterGL
+name: AfterGL Library Build
 
 on:
   push:
@@ -7,33 +7,29 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  validate-library:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Install 3D Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           libglfw3-dev \
           libglm-dev \
           libgl1-mesa-dev \
-          libglu1-mesa-dev \
-          xvfb \
-          xauth
+          libglu1-mesa-dev
 
-    - name: Compile AfterGL
+    - name: Verify Library Compilation
       run: |
-        g++ anim.cpp AfterGL/src/AfterGL.cpp AfterGL/src/glad.c -o gradius \
+        # Compile AfterGL.cpp and glad.c into object files (-c)
+        # This checks for errors without needing a main() function or game file.
+        g++ -c AfterGL/src/AfterGL.cpp AfterGL/src/glad.c \
           -I AfterGL/include \
-          -lglfw -lGL -ldl -lpthread
+          -fPIC
 
-    - name: Test Initialization (Headless)
-      run: |
-        # Use xvfb-run to start a virtual display so the engine can Init()
-        xvfb-run --auto-servernum ./gradius &
-        sleep 5
-        kill $!
+    - name: Success Check
+      run: echo "AfterGL library files compiled successfully."
