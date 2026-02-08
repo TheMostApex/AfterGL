@@ -23,15 +23,25 @@ jobs:
           libgl1-mesa-dev \
           libglu1-mesa-dev
 
-    - name: Verify Library Compilation
+    - name: Auto-Detect and Compile
       run: |
-        # Explicitly move into the subfolder
-        cd AfterGL
+        # Find the directories for src and include regardless of nesting
+        SRC_DIR=$(find . -name "AfterGL.cpp" -exec dirname {} \;)
+        INC_DIR=$(find . -name "AfterGL.h" -exec dirname {} \;)
 
-        # Now that we are inside AfterGL, paths are relative to this folder
-        g++ -c src/AfterGL.cpp src/glad.c \
-          -I include \
+        if [ -z "$SRC_DIR" ]; then
+          echo "Error: Could not find AfterGL.cpp in the repository."
+          ls -R
+          exit 1
+        fi
+
+        echo "Found source in: $SRC_DIR"
+        echo "Found headers in: $INC_DIR"
+
+        # Compile from the detected locations
+        g++ -c "$SRC_DIR/AfterGL.cpp" "$SRC_DIR/glad.c" \
+          -I "$INC_DIR" \
           -fPIC
 
     - name: Success Check
-      run: echo "Library validation complete."
+      run: echo "Library validation complete."s
