@@ -1,11 +1,10 @@
-name: AfterGL-CI
+name: Build AfterGL
 
-# Fix: Define when the action should run
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -15,13 +14,26 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Install Graphics Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglew-dev libglfw3-dev libgl1-mesa-dev pkg-config
-    - name: Configure CMake
-      # Using -B build creates the directory automatically
-      run: cmake -B build
+        sudo apt-get install -y \
+          libglfw3-dev \
+          libglm-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          xvfb \
+          xauth
 
-    - name: Build AfterGL
-      run: cmake --build build
+    - name: Compile AfterGL
+      run: |
+        g++ anim.cpp AfterGL/src/AfterGL.cpp AfterGL/src/glad.c -o gradius \
+          -I AfterGL/include \
+          -lglfw -lGL -ldl -lpthread
+
+    - name: Test Initialization (Headless)
+      run: |
+        # Use xvfb-run to start a virtual display so the engine can Init()
+        xvfb-run --auto-servernum ./gradius &
+        sleep 5
+        kill $!
