@@ -1,3 +1,5 @@
+<meta name="google-site-verification" content="EUbup-QHRJyiHtcKY5x-3BboHA8jU0aoRHwgODiMZkU" />
+
 AfterGL is a lightweight OpenGL 4.0 fork designed for compatibility. It is specifically built to provide a modern graphics foundation for legacy GPUs that can no longer handle heavy modern engines.
 
 It requires GLM for 3D processing.
